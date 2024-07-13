@@ -21,8 +21,15 @@ class VCCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.full_stop = False
-        bot.kyuu_channel = bot.get_guild(1246945254972723202).get_channel(1261473569355993209)
-        bot.test_channel = bot.get_guild(1069019652023398532).get_channel(1069019652539302013)
+        try:
+            try:
+                bot.kyuu_channel = bot.get_guild(1246945254972723202).get_channel(1261473569355993209)
+            except AttributeError:
+                pass
+
+            bot.test_channel = bot.get_guild(1069019652023398532).get_channel(1069019652539302013)
+        except AttributeError:
+            pass
 
         self.play_loop.start()
     
