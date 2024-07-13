@@ -70,11 +70,11 @@ class VCCommands(commands.Cog):
 
         if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
             [c.is_connected() for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id]:
-            await self.bot.kyuu_channel.join()
+            await self.bot.kyuu_channel.connect()
         
         if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and \
             [c.is_connected() for c in voice_clients if c.channel.id == self.bot.test_channel.id]:
-            await self.bot.test_channel.join()
+            await self.bot.test_channel.connect()
 
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
