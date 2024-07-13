@@ -66,13 +66,16 @@ class VCCommands(commands.Cog):
         if self.bot.full_stop:
             return
 
-        if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and not self.bot.kyuu_channel.is_connected():
+        voice_clients = self.bot.voice_clients
+
+        if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
+            [c.is_connected() for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id]:
             await self.bot.kyuu_channel.join()
         
-        if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and not self.bot.test_channel.is_connected():
+        if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and \
+            [c.is_connected() for c in voice_clients if c.channel.id == self.bot.test_channel.id]:
             await self.bot.test_channel.join()
 
-        voice_clients = self.bot.voice_clients
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
                 voice_client.play(discord.FFmpegPCMAudio("skibidiedgerizz.mp3"),
