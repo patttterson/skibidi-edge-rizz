@@ -10,11 +10,6 @@ import logging
 import os
 from dotenv import load_dotenv
 
-import imageio_ffmpeg as ffmpeg
-
-ffmpeg_path = ffmpeg.get_ffmpeg_exe()
-os.environ['PATH'] = os.path.dirname(ffmpeg_path) + os.pathsep + os.environ['PATH']
-
 load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
