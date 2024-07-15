@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+import asyncio
+
 class VCListeners(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -11,6 +13,7 @@ class VCListeners(commands.Cog):
         if member == self.bot.user:
             if before.channel is not None and after.channel is None:
                 print(type(member))
+                await asyncio.sleep(1)
                 await self.handle_disconnect(member.guild)
     
     async def handle_disconnect(self, guild):
