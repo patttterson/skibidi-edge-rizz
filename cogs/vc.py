@@ -67,12 +67,12 @@ class VCCommands(commands.Cog):
     
     @app_commands.command(name="upload", description="Upload a .mp3 file to add to the bot.")
     @is_owner()
-    async def upload(self, interaction: discord.Interaction, *, sound: discord.Attachment, name: Optional[str] = False):
+    async def upload(self, interaction: discord.Interaction, *, sound: discord.Attachment, name: Optional[str] = None):
         if sound.content_type != "audio/mpeg":
             await interaction.response.send_message("File must be a .mp3 file", ephemeral=True)
             return
         
-        if not name:
+        if name == None:
             name = sound.filename[:-4]
         
         file = await sound.to_file(f"{name}.mp3")
