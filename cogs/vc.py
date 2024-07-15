@@ -133,10 +133,10 @@ class VCCommands(commands.Cog):
             await interaction.response.send_message(f"I'm not connected to a voice channel, pick one you want me to join.", ephemeral=True, view=view)
             return
         
-        if interaction.guild.voice_client.channel.id != interaction.author.voice.channel.id:
+        if interaction.guild.voice_client.channel.id != interaction.user.voice.channel.id:
             self.bot.disable_auto_join = True
             await interaction.guild.voice_client.disconnect()
-            await interaction.author.voice.channel.connect()
+            await interaction.user.voice.channel.connect()
 
         if not os.path.isfile(f"sounds/{file}"):
             await interaction.response.send_message("File not found", ephemeral=True)
