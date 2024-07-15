@@ -77,7 +77,7 @@ class VCCommands(commands.Cog):
 
         if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
             not [c for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id] and \
-            not bot.disable_auto_join:
+            not self.bot.disable_auto_join:
             await self.bot.kyuu_channel.connect()
         
         if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and \
