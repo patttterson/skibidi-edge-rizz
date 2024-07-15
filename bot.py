@@ -33,6 +33,38 @@ def is_owner():
         return interaction.user.id == 843230753734918154
     return app_commands.check(predicate)
 
+@bot.event
+async def on_command_error(ctx, error):
+    if hasattr(ctx.command, 'on_error'):
+        return
+    elif isinstance(error, commands.CommandNotFound):
+        await ctx.send("Invalid Command Used.")
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send(f"You are missing permissions to run this command.\n"
+                       f"If you think this is a mistake, please contact {bot.application_info().owner}.")
+    elif isinstance(error, commands.ExtensionNotLoaded):
+        await ctx.send("The extension(s) you are trying to unload are currently not loaded.")
+    elif isinstance(error, commands.ExtensionAlreadyLoaded):
+        await ctx.send("The extension(s) you are trying to load are currently already loaded.")
+    elif isinstance(error, commands.ExtensionNotFound):
+        await ctx.send("The extension you are trying to load does not exist.")
+    elif isinstance(error, commands.NoPrivateMessage):
+        await ctx.send("The command you are trying to call can only be called in a server, not a DM.")
+    elif isinstance(error, commands.CheckFailure):
+        await ctx.send("nope lmao")
+    else:
+        embed = discord.Embed(title='An Error Occurred, and has been sent to the developers.',
+                              description='', colour=discord.Colour.red())
+        embed.add_field(name="Error", value=error)
+        bug_message = await ctx.send(embed=embed)
+
+        guild = bot.get_guild(1246945254972723202)
+        dev = guild.get_member(843230753734918154)
+        await dev.send(bug_message.jump_url)
+        embed.title = f"An Error Occurred in {ctx.guild.name}."
+        await dev.send(embed=embed)
+        await dev.send(f"The command `{ctx.command.name}` failed to run properly.")
+
 @bot.command()
 @commands.guild_only()
 @commands.is_owner()
