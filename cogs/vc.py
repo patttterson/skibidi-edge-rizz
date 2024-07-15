@@ -142,7 +142,15 @@ class VCCommands(commands.Cog):
             await interaction.user.voice.channel.connect()
 
         if not os.path.isfile(f"sounds/{file}"):
-            await interaction.response.send_message("File not found", ephemeral=True)
+            await interaction.response.send_message("File not found.", ephemeral=True)
+            return
+
+        if interaction.guild.voice_client.is_playing():
+            await interaction.response.send_message("I'm already playing something!", ephemeral=True)
+            return
+        
+        if interaction.guild.voice_client.channel.id == self.bot.kyuu_channel.id:
+            await interaction.response.send_message("I'm not playing sounds in this channel!", ephemeral=True)
             return
 
         def after_playing(e):
