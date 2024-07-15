@@ -3,3 +3,4 @@ activate.bat
 .env
 db_testing.py
 skibidi.db
+.VSCodeCounter

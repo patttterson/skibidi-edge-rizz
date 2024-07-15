@@ -34,6 +34,13 @@ class Bot(commands.Bot):
         self.db = await asqlite.connect("skibidi.db")
         self.settings_cache = {}
 
+        async with self.db.cursor() as cursor:
+            await cursor.execute("SELECT * FROM settings")
+            settings = await cursor.fetchall()
+            settings = list(map(dict, settings))
+            for s in settings:
+                self.settings_cache[s.pop('guild_id')] = s
+
         await bot.load_extension('jishaku')
 
         for filename in os.listdir('cogs'):
@@ -41,14 +48,15 @@ class Bot(commands.Bot):
                 await bot.load_extension(f'cogs.{filename[:-3]}')
     
     async def get_settings(self, guild_id):
-        if guild_id in self.settings_cache:
-            return self.settings_cache[guild_id]
-        await self.db.execute("SELECT prefix FROM settings WHERE guild_id = ?", (guild_id,))
-        settings = self.db.fetchone()
-        if not settings:
-            return None
-        self.settings_cache[guild_id] = settings
-        return settings
+        if not self.settings_cache.get(guild_id, False):
+            async with self.db.cursor() as cursor:
+                await cursor.execute("SELECT * FROM settings WHERE guild_id = ?", (guild_id,))
+                settings = dict(await cursor.fetchone())
+                if not settings:
+                    return None
+                self.settings_cache[settings.pop('guild_id')] = settings
+
+        return self.settings_cache[guild_id]
     
     async def on_ready(self):
         logging.info("Connected to Discord.")

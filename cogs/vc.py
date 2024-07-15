@@ -211,19 +211,6 @@ class VCCommands(commands.Cog):
             return
 
         voice_clients = self.bot.voice_clients
-        print(voice_clients)
-        print(self.bot.get_settings(1246945254972723202))
-
-        """
-        if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
-            not [c for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id] and \
-            not self.bot.disable_auto_join:
-            await self.bot.kyuu_channel.connect()
-        
-        if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and \
-            not [c for c in voice_clients if c.channel.id == self.bot.test_channel.id]:
-            await self.bot.test_channel.connect()
-        """
 
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
