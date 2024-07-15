@@ -21,6 +21,7 @@ class VCCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.full_stop = False
+        bot.disable_auto_join = False
         try:
             try:
                 bot.kyuu_channel = bot.get_guild(1246945254972723202).get_channel(1261473569355993209)
@@ -55,6 +56,12 @@ class VCCommands(commands.Cog):
     
     @app_commands.command()
     @is_owner()
+    async def toggle_auto_join(self, interaction: discord.Interaction):
+        self.bot.disable_auto_join = not self.bot.disable_auto_join
+        await interaction.response.send_message(f"Auto join {'disabled' if self.bot.disable_auto_join else 'enabled'}", ephemeral=False)
+    
+    @app_commands.command()
+    @is_owner()
     async def full_stop(self, interaction: discord.Interaction):
         self.bot.full_stop = True
         for c in self.bot.voice_clients:
@@ -69,7 +76,8 @@ class VCCommands(commands.Cog):
         voice_clients = self.bot.voice_clients
 
         if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
-            not [c for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id]:
+            not [c for c in voice_clients if c.channel.id == self.bot.kyuu_channel.id] and \
+            not bot.disable_auto_join:
             await self.bot.kyuu_channel.connect()
         
         if 1069019652023398532 in [guild.id for guild in self.bot.guilds] and \
