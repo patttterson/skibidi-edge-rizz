@@ -38,11 +38,17 @@ class VCCommands(commands.Cog):
         def predicate(interaction: discord.Interaction):
             return interaction.user.id == 843230753734918154
         return app_commands.check(predicate)
+
+    toggle_group = app_commands.Group("toggle", "Toggle commands")
     
     @app_commands.command()
     @is_owner()
     @app_commands.guild_only()
     async def join(self, interaction: discord.Interaction, *, channel: discord.VoiceChannel):
+        if interaction.guild.voice_client and interaction.guild.voice_client.is_connected():
+            self.bot.disable_auto_join = True
+            await interaction.guild.voice_client.disconnect()
+
         await channel.connect()
         await interaction.response.send_message(f"Joined {channel.mention}", ephemeral=True)
     
@@ -50,23 +56,23 @@ class VCCommands(commands.Cog):
     @is_owner()
     @app_commands.guild_only()
     async def leave(self, interaction: discord.Interaction):
+        self.bot.disable_auto_join = False
+
         channel = interaction.guild.voice_client.channel
         await interaction.guild.voice_client.disconnect()
         await interaction.response.send_message(f"Left {channel.mention}", ephemeral=True)
     
-    @app_commands.command()
+    @toggle_group.command(name="autojoin", description="Toggle auto join, which makes the bot auto rejoin <#1261473569355993209>")
     @is_owner()
     async def toggle_auto_join(self, interaction: discord.Interaction):
         self.bot.disable_auto_join = not self.bot.disable_auto_join
         await interaction.response.send_message(f"Auto join {'disabled' if self.bot.disable_auto_join else 'enabled'}", ephemeral=False)
     
-    @app_commands.command()
+    @toggle_group.command(name="stop", description="Stop the bot from playing")
     @is_owner()
-    async def full_stop(self, interaction: discord.Interaction):
-        self.bot.full_stop = True
-        for c in self.bot.voice_clients:
-            c.stop()
-        await interaction.response.send_message("Stopped all", ephemeral=True)
+    async def toggle_stop(self, interaction: discord.Interaction):
+        self.bot.full_stop = not self.bot.full_stop
+        await interaction.response.send_message(f"{'Stopped' if self.bot.full_stop else 'Resumed'}", ephemeral=False)
     
     @tasks.loop(seconds=1)
     async def play_loop(self):
