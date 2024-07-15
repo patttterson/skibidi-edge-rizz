@@ -36,7 +36,7 @@ class VCCommands(commands.Cog):
     
     def is_owner():
         def predicate(interaction: discord.Interaction):
-            return interaction.user.id == 843230753734918154
+            return interaction.user.id in (843230753734918154, 601068265745416225)
         return app_commands.check(predicate)
 
     toggle_group = app_commands.Group(name="toggle", description="Toggle commands")
