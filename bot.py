@@ -6,6 +6,8 @@ from typing import Literal, Optional
 
 import time
 
+import asqlite
+
 import logging
 import os
 from dotenv import load_dotenv
@@ -14,19 +16,48 @@ load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
 
-bot = commands.Bot(command_prefix='!',
+async def get_prefix(bot, message):
+    if not message.guild:
+        return commands.when_mentioned_or("!")(bot, message)
+    async with bot.db.cursor() as cursor:
+        await cursor.execute("SELECT prefix FROM settings WHERE guild_id = ?", (message.guild.id,))
+        prefix = await cursor.fetchone()
+        return commands.when_mentioned_or(prefix[0] if prefix else "!")(bot, message)
+
+class Bot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tree = app_commands.Tree(self)
+    
+    async def setup_hook(self):
+        logging.info(f'Logged in as {bot.user.name}.')
+
+        self.db = await asqlite.connect("skibidi.db")
+        self.settings_cache = {}
+
+        await bot.load_extension('jishaku')
+
+        for filename in os.listdir('cogs'):
+            if filename.endswith('.py') and not filename.startswith("_"):
+                await bot.load_extension(f'cogs.{filename[:-3]}')
+    
+    async def get_settings(self, guild_id):
+        if guild_id in self.settings_cache:
+            return self.settings_cache[guild_id]
+        await self.db.execute("SELECT prefix FROM settings WHERE guild_id = ?", (guild_id,))
+        settings = self.db.fetchone()
+        if not settings:
+            return None
+        self.settings_cache[guild_id] = settings
+        return settings
+    
+    async def on_ready(self):
+        logging.info("Connected to Discord.")
+
+bot = Bot(command_prefix=get_prefix,
                    intents=discord.Intents.all(),
                    activity=discord.Activity(type=discord.ActivityType.listening, name="brainrot"),
                    owner_id=843230753734918154)
-
-@bot.event
-async def on_ready():
-    logging.info(f'Logged in as {bot.user.name}')
-    await bot.load_extension('jishaku')
-
-    for filename in os.listdir('cogs'):
-        if filename.endswith('.py') and not filename.startswith("_"):
-            await bot.load_extension(f'cogs.{filename[:-3]}')
 
 def is_owner():
     def predicate(interaction: discord.Interaction):
