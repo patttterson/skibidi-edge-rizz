@@ -155,13 +155,14 @@ class VCCommands(commands.Cog):
         self.done_playing.start()
     
     @play_sound.autocomplete("file")
-    async def file_autocomplete(interaction: discord.Interaction, current: str):
+    async def file_autocomplete(self, interaction: discord.Interaction, current: str):
         path = "sounds"
         files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         return [
             app_commands.Choice(name=file, value=file)
             for file in files if current.lower() in file.lower()
         ]
+
 
     @tasks.loop(seconds=1)
     async def play_loop(self):
