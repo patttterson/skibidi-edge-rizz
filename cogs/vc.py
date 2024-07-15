@@ -211,6 +211,8 @@ class VCCommands(commands.Cog):
             return
 
         voice_clients = self.bot.voice_clients
+        print(voice_clients)
+        print(self.bot.get_settings(1246945254972723202))
 
         """
         if 1246945254972723202 in [guild.id for guild in self.bot.guilds] and \
