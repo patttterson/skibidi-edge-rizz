@@ -61,6 +61,11 @@ class VCCommands(commands.Cog):
         self.play_loop.start()
     
     def is_owner():
+        def predicate(ctx):
+            return ctx.author.id == 843230753734918154
+        return commands.check(predicate)
+
+    def can_use():
         def predicate(interaction: discord.Interaction):
             return interaction.user.id in (843230753734918154,
                                            601068265745416225,
@@ -71,7 +76,7 @@ class VCCommands(commands.Cog):
     play_group = app_commands.Group(name="play", description="Play commands")   
     
     @app_commands.command()
-    @is_owner()
+    @can_use()
     @app_commands.guild_only()
     async def join(self, interaction: discord.Interaction, *, channel: discord.VoiceChannel):
         if interaction.guild.voice_client and interaction.guild.voice_client.is_connected():
@@ -82,7 +87,7 @@ class VCCommands(commands.Cog):
         await interaction.response.send_message(f"Joined {channel.mention}", ephemeral=True)
     
     @app_commands.command()
-    @is_owner()
+    @can_use()
     @app_commands.guild_only()
     async def leave(self, interaction: discord.Interaction):
         self.bot.disable_auto_join = False
@@ -92,19 +97,19 @@ class VCCommands(commands.Cog):
         await interaction.response.send_message(f"Left {channel.mention}", ephemeral=True)
     
     @toggle_group.command(name="autojoin", description="Toggle auto join, which makes the bot auto rejoin <#1261473569355993209>")
-    @is_owner()
+    @can_use()
     async def toggle_auto_join(self, interaction: discord.Interaction):
         self.bot.disable_auto_join = not self.bot.disable_auto_join
         await interaction.response.send_message(f"Auto join {'disabled' if self.bot.disable_auto_join else 'enabled'}", ephemeral=False)
     
     @toggle_group.command(name="stop", description="Stop the bot from playing")
-    @is_owner()
+    @can_use()
     async def toggle_stop(self, interaction: discord.Interaction):
         self.bot.full_stop = not self.bot.full_stop
         await interaction.response.send_message(f"{'Stopped' if self.bot.full_stop else 'Resumed'}", ephemeral=False)
     
     @app_commands.command(name="upload", description="Upload a .mp3 file to add to the bot.")
-    @is_owner()
+    @can_use()
     async def upload(self, interaction: discord.Interaction, *, sound: discord.Attachment, name: Optional[str] = None):
         if sound.content_type != "audio/mpeg":
             await interaction.response.send_message("File must be a .mp3 file", ephemeral=True)
@@ -153,8 +158,27 @@ class VCCommands(commands.Cog):
         
         await interaction.response.send_message(f"Playing {file}", ephemeral=True)
         self.done_playing.start()
+
+    @app_commands.command(name="delete", description="Delete a sound")
+    @is_owner()
+    async def delete(self, interaction: discord.Interaction, file: str):
+        if not os.path.isfile(f"sounds/{file}"):
+            await interaction.response.send_message("File not found", ephemeral=True)
+            return
+        
+        view = Confirm()
+        await interaction.response.send_message(f"Are you sure you want to delete {file}?", ephemeral=True, view=view)
+        await view.wait()
+        if not view.value:
+            await interaction.followup.send("Request timed out...", ephemeral=True)
+        elif view.value:
+            os.remove(f"sounds/{file}")
+            await interaction.followup.send(f"Deleted {file}.", ephemeral=True)
+        else:
+            await interaction.followup.send("Cancelled.", ephemeral=True)
     
     @play_sound.autocomplete("file")
+    @delete.autocomplete("file")
     async def file_autocomplete(self, interaction: discord.Interaction, current: str):
         path = "sounds"
         files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
@@ -162,7 +186,6 @@ class VCCommands(commands.Cog):
             app_commands.Choice(name=file, value=file)
             for file in files if current.lower() in file.lower()
         ]
-
 
     @tasks.loop(seconds=1)
     async def play_loop(self):
