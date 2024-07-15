@@ -178,8 +178,18 @@ class VCCommands(commands.Cog):
         for b in view.children:
             b.disabled = True
     
+    @app_commands.command(name="preview", description="Preview a sound")
+    @can_use()
+    async def preview(self, interaction: discord.Interaction, file: str):
+        if not os.path.isfile(f"sounds/{file}"):
+            await interaction.response.send_message("File not found", ephemeral=True)
+            return
+
+        await interaction.response.send_message(f"Previewing {file}", ephemeral=True, file=discord.File(open(f"sounds/{file}", "rb"), filename=file))
+
     @play_sound.autocomplete("file")
     @delete.autocomplete("file")
+    @preview.autocomplete("file")
     async def file_autocomplete(self, interaction: discord.Interaction, current: str):
         path = "sounds"
         files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
