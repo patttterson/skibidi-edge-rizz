@@ -78,7 +78,7 @@ class VCCommands(commands.Cog):
         file = await sound.to_file(filename=f"{name}.mp3")
 
         with open(f"sounds/{name}.mp3", "wb") as f:
-            f.write(file.fp)
+            f.write(file.fp.read())
 
         await interaction.response.send_message(f"Uploaded file {name}", ephemeral=True)
     
