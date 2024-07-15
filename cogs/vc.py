@@ -2,20 +2,9 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
+from typing import Optional
+
 import asyncio
-
-from typing import Literal, Optional
-
-async def start(interaction: discord.Interaction):
-    voice_client = interaction.guild.voice_client
-
-    if not voice_client.is_connected():
-        await voice_client.connect()
-    
-    await voice_client.play(discord.FFmpegPCMAudio("skibidiedgerizz.mp3"))
-
-    while voice_client.is_playing():
-        await asyncio.sleep(1)
 
 class VCCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -36,7 +25,9 @@ class VCCommands(commands.Cog):
     
     def is_owner():
         def predicate(interaction: discord.Interaction):
-            return interaction.user.id in (843230753734918154, 601068265745416225)
+            return interaction.user.id in (843230753734918154,
+                                           601068265745416225,
+                                           871505546593853461)
         return app_commands.check(predicate)
 
     toggle_group = app_commands.Group(name="toggle", description="Toggle commands")
@@ -74,6 +65,23 @@ class VCCommands(commands.Cog):
         self.bot.full_stop = not self.bot.full_stop
         await interaction.response.send_message(f"{'Stopped' if self.bot.full_stop else 'Resumed'}", ephemeral=False)
     
+    @app_commands.command(name="upload", description="Upload a .mp3 file to add to the bot.")
+    @is_owner()
+    async def upload(self, interaction: discord.Interaction, *, sound: discord.Attachment, name: Optional[str] = False):
+        if sound.content_type != "audio/mpeg":
+            await interaction.response.send_message("File must be a .mp3 file", ephemeral=True)
+            return
+        
+        if not name:
+            name = sound.filename[:-4]
+        
+        file = await sound.to_file(f"{name}.mp3")
+
+        with open(f"sounds/{name}.mp3", "wb") as f:
+            f.write(file.fp)
+
+        await interaction.response.send_message(f"Uploaded file {name}", ephemeral=True)
+    
     @tasks.loop(seconds=1)
     async def play_loop(self):
         if self.bot.full_stop:
@@ -92,7 +100,7 @@ class VCCommands(commands.Cog):
 
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
-                voice_client.play(discord.FFmpegPCMAudio("skibidiedgerizz.mp3"),
+                voice_client.play(discord.FFmpegPCMAudio("sounds/skibidiedgerizz.mp3"),
                                   after=lambda e: print(f'Error: {e}') if e else None)
     
 
