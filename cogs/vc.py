@@ -156,14 +156,6 @@ class VCCommands(commands.Cog):
         
         await interaction.response.send_message(f"Playing {file}", ephemeral=True)
         self.done_playing.start()
-    
-    @app_commands.command(name="list", description="List all sounds")
-    @can_use()
-    async def list_sounds(self, interaction: discord.Interaction):
-        path = "sounds"
-        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-        files = "\n".join(files)
-        await interaction.response.send_message(f"```\n{files}\n```", ephemeral=True)
 
     @app_commands.command(name="delete", description="Delete a sound")
     @is_owner()
@@ -195,6 +187,14 @@ class VCCommands(commands.Cog):
             app_commands.Choice(name=file, value=file)
             for file in files if current.lower() in file.lower()
         ]
+    
+    @app_commands.command(name="list", description="List all sounds")
+    @can_use()
+    async def list_sounds(self, interaction: discord.Interaction):
+        path = "sounds"
+        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        files = "\n".join(files)
+        await interaction.response.send_message(f"```\n{files}\n```", ephemeral=True)
 
     @tasks.loop(seconds=1)
     async def play_loop(self):
