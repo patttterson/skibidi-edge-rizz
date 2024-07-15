@@ -39,7 +39,7 @@ class VCCommands(commands.Cog):
             return interaction.user.id == 843230753734918154
         return app_commands.check(predicate)
 
-    toggle_group = app_commands.Group("toggle", "Toggle commands")
+    toggle_group = app_commands.Group(name="toggle", description="Toggle commands")
     
     @app_commands.command()
     @is_owner()
