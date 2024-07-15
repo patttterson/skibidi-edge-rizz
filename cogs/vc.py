@@ -75,7 +75,7 @@ class VCCommands(commands.Cog):
         if name == None:
             name = sound.filename[:-4]
         
-        file = await sound.to_file(f"{name}.mp3")
+        file = await sound.to_file(filename=f"{name}.mp3")
 
         with open(f"sounds/{name}.mp3", "wb") as f:
             f.write(file.fp)
