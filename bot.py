@@ -27,7 +27,6 @@ async def get_prefix(bot, message):
 class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.tree = app_commands.Tree(self)
     
     async def setup_hook(self):
         logging.info(f'Logged in as {bot.user.name}.')

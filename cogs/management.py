@@ -18,7 +18,7 @@ class Management(commands.Cog):
         await self.bot.db.execute("INSERT INTO settings (guild_id, prefix, base_channel_id) VALUES (?, ?, ?)", (guild.id, "!", guild.system_channel.id))
         await self.bot.db.commit()
 
-    settings_group = app_commands.Group("settings", "Manage the bot's settings.")
+    settings_group = app_commands.Group(name="settings", description="Manage the bot's settings.")
 
     @settings_group.command(name="prefix", description="Set the bot's prefix.")
     @app_commands.guild_only()
