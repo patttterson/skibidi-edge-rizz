@@ -15,7 +15,7 @@ class VCListeners(commands.Cog):
     
     async def handle_disconnect(self, guild):
         if guild.id in self.bot.settings_cache:
-            channel = guild.get_channel(self.bot.get_settings(guild.id)["base_channel_id"])
+            channel = guild.get_channel(await self.bot.get_settings(guild.id)["base_channel_id"])
             print(self.bot.get_settings(guild.id)["base_channel_id"])
             if channel is not None:
                 await channel.connect()
