@@ -17,7 +17,7 @@ class VCListeners(commands.Cog):
         if guild.id in self.bot.settings_cache:
             g_settings = await self.bot.get_settings(guild.id)
             channel = guild.get_channel(g_settings["base_channel_id"])
-            print(self.bot.get_settings(guild.id)["base_channel_id"])
+            print(g_settings["base_channel_id"])
             if channel is not None:
                 await channel.connect()
 
