@@ -10,6 +10,7 @@ class VCListeners(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         if member == self.bot.user:
             if before.channel is not None and after.channel is None:
+                print(type(member))
                 await self.handle_disconnect(member.guild)
     
     async def handle_disconnect(self, guild):
