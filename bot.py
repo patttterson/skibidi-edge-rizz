@@ -33,13 +33,22 @@ class Bot(commands.Bot):
 
         self.db = await asqlite.connect("skibidi.db")
         self.settings_cache = {}
+        self.sound_cache = {}
 
         async with self.db.cursor() as cursor:
             await cursor.execute("SELECT * FROM settings")
             settings = await cursor.fetchall()
             settings = list(map(dict, settings))
             for s in settings:
+                s["rejoin"] = True
                 self.settings_cache[s.pop('guild_id')] = s
+        
+        async with self.db.cursor() as cursor:
+            await cursor.execute("SELECT * FROM sounds")
+            sounds = await cursor.fetchall()
+            sounds = list(map(dict, sounds))
+            for s in sounds:
+                self.sound_cache[s.pop('id')] = s
 
         await bot.load_extension('jishaku')
 
@@ -54,9 +63,32 @@ class Bot(commands.Bot):
                 settings = dict(await cursor.fetchone())
                 if not settings:
                     return None
+                settings["rejoin"] = True
                 self.settings_cache[settings.pop('guild_id')] = settings
 
         return self.settings_cache[guild_id]
+    
+    async def get_sounds(self, user_id):
+        if not self.sound_cache.get(user_id, False):
+            async with self.db.cursor() as cursor:
+                await cursor.execute("SELECT * FROM sounds WHERE author_id = ?", (user_id,))
+                sounds = dict(await cursor.fetchone())
+                if not sounds:
+                    return None
+                self.sound_cache[sounds.pop('id')] = sounds
+
+        return self.sound_cache[user_id]
+    
+    async def get_sound(self, sound_id):
+        if not self.sound_cache.get(sound_id, False):
+            async with self.db.cursor() as cursor:
+                await cursor.execute("SELECT * FROM sounds WHERE id = ?", (sound_id,))
+                sound = dict(await cursor.fetchone())
+                if not sound:
+                    return None
+                self.sound_cache[sound.pop('id')] = sound
+
+        return self.sound_cache[sound_id]
     
     async def on_ready(self):
         logging.info("Connected to Discord.")

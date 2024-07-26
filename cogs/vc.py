@@ -8,38 +8,7 @@ import os
 
 import asyncio
 
-class Confirm(discord.ui.View):
-    def __init__(self):
-        super().__init__()
-        self.value = None
-
-    # When the confirm button is pressed, set the inner value to `True` and
-    # stop the View from listening to more input.
-    # We also send the user an ephemeral message that we're confirming their choice.
-    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.value = True
-        self.stop()
-
-    # This one is similar to the confirmation button except sets the inner value to `False`
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.value = False
-        self.stop()
-
-class Dropdown(discord.ui.Select):
-    def __init__(self, vcs: list[discord.VoiceChannel], custom_callback):
-        self.custom_callback = custom_callback
-
-        options = [discord.SelectOption(label=c.name, value=c.id) for c in vcs]
-
-        # The placeholder is what will be shown when no option is chosen
-        # The min and max values indicate we can only pick one of the three options
-        # The options parameter defines the dropdown options. We defined this above
-        super().__init__(placeholder='Pick a voice channel...', min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        await self.custom_callback(interaction, self.values[0])
+from views import *
 
 class VCCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -61,8 +30,7 @@ class VCCommands(commands.Cog):
                                            871505546593853461)
         return app_commands.check(predicate)
 
-    toggle_group = app_commands.Group(name="toggle", description="Toggle commands")
-    play_group = app_commands.Group(name="play", description="Play commands")   
+    toggle_group = app_commands.Group(name="toggle", description="Toggle commands") 
     
     @app_commands.command()
     @can_use()
@@ -85,125 +53,11 @@ class VCCommands(commands.Cog):
         await interaction.guild.voice_client.disconnect()
         await interaction.response.send_message(f"Left {channel.mention}", ephemeral=True)
     
-    @toggle_group.command(name="autojoin", description="Toggle auto join, which makes the bot auto rejoin <#1261473569355993209>")
-    @can_use()
-    async def toggle_auto_join(self, interaction: discord.Interaction):
-        self.bot.disable_auto_join = not self.bot.disable_auto_join
-        await interaction.response.send_message(f"Auto join {'disabled' if self.bot.disable_auto_join else 'enabled'}", ephemeral=False)
-    
     @toggle_group.command(name="stop", description="Stop the bot from playing")
-    @can_use()
+    @is_owner()
     async def toggle_stop(self, interaction: discord.Interaction):
         self.bot.full_stop = not self.bot.full_stop
         await interaction.response.send_message(f"{'Stopped' if self.bot.full_stop else 'Resumed'}", ephemeral=False)
-    
-    @app_commands.command(name="upload", description="Upload a .mp3 file to add to the bot.")
-    @can_use()
-    async def upload(self, interaction: discord.Interaction, *, sound: discord.Attachment, name: Optional[str] = None):
-        if sound.content_type != "audio/mpeg":
-            await interaction.response.send_message("File must be a .mp3 file", ephemeral=True)
-            return
-        
-        if name == None:
-            name = sound.filename[:-4]
-        
-        file = await sound.to_file(filename=f"{name}.mp3")
-
-        with open(f"sounds/{name}.mp3", "wb") as f:
-            f.write(file.fp.read())
-
-        await interaction.response.send_message(f"Uploaded file {name}", ephemeral=True)
-    
-    async def custom_callback(self, interaction: discord.Interaction, voice_channel_id: str):
-        voice_channel = interaction.guild.get_channel(int(voice_channel_id))
-        await voice_channel.connect()
-        await interaction.response.send_message(f"Joined {voice_channel.mention}", ephemeral=True)
-
-    @play_group.command(name="sound", description="Play a sound")
-    @app_commands.guild_only()
-    async def play_sound(self, interaction: discord.Interaction, file: str):
-        if not interaction.guild.voice_client:
-            view = Dropdown(interaction.guild.voice_channels, self.custom_callback)
-            await interaction.response.send_message(f"I'm not connected to a voice channel, pick one you want me to join.", ephemeral=True, view=view)
-            return
-        
-        if interaction.guild.voice_client.channel.id != interaction.user.voice.channel.id:
-            self.bot.disable_auto_join = True
-            await interaction.guild.voice_client.disconnect()
-            await interaction.user.voice.channel.connect()
-
-        if not os.path.isfile(f"sounds/{file}"):
-            await interaction.response.send_message("File not found.", ephemeral=True)
-            return
-
-        if interaction.guild.voice_client.is_playing():
-            await interaction.response.send_message("I'm already playing something!", ephemeral=True)
-            return
-        
-        if interaction.guild.voice_client.channel.id == self.bot.kyuu_channel.id:
-            await interaction.response.send_message("I'm not playing sounds in this channel!", ephemeral=True)
-            return
-
-        def after_playing(e):
-            if e:
-                print(f'Error: {e}')
-            self.bot.disable_auto_join = False
-            asyncio.run_coroutine_threadsafe(interaction.guild.voice_client.disconnect(), self.bot.loop)
-
-        interaction.guild.voice_client.play(discord.FFmpegPCMAudio(f"sounds/{file}"),
-                                            after=after_playing)
-        
-        await interaction.response.send_message(f"Playing {file}", ephemeral=True)
-        self.done_playing.start()
-
-    @app_commands.command(name="delete", description="Delete a sound")
-    @is_owner()
-    async def delete(self, interaction: discord.Interaction, file: str):
-        if not os.path.isfile(f"sounds/{file}"):
-            await interaction.response.send_message("File not found", ephemeral=True)
-            return
-        
-        view = Confirm()
-        await interaction.response.send_message(f"Are you sure you want to delete {file}?", ephemeral=True, view=view)
-        await view.wait()
-        if not view.value:
-            await interaction.followup.send("Request timed out...", ephemeral=True)
-        elif view.value:
-            os.remove(f"sounds/{file}")
-            await interaction.followup.send(f"Deleted {file}.", ephemeral=True)
-        else:
-            await interaction.followup.send("Cancelled.", ephemeral=True)
-        
-        for b in view.children:
-            b.disabled = True
-    
-    @app_commands.command(name="preview", description="Preview a sound")
-    @can_use()
-    async def preview(self, interaction: discord.Interaction, file: str):
-        if not os.path.isfile(f"sounds/{file}"):
-            await interaction.response.send_message("File not found", ephemeral=True)
-            return
-
-        await interaction.response.send_message(f"Previewing {file}", ephemeral=True, file=discord.File(open(f"sounds/{file}", "rb"), filename=file))
-
-    @play_sound.autocomplete("file")
-    @delete.autocomplete("file")
-    @preview.autocomplete("file")
-    async def file_autocomplete(self, interaction: discord.Interaction, current: str):
-        path = "sounds"
-        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-        return [
-            app_commands.Choice(name=file, value=file)
-            for file in files if current.lower() in file.lower()
-        ]
-    
-    @app_commands.command(name="list", description="List all sounds")
-    @can_use()
-    async def list_sounds(self, interaction: discord.Interaction):
-        path = "sounds"
-        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-        files = "\n".join(files)
-        await interaction.response.send_message(f"```\n{files}\n```", ephemeral=True)
 
     @tasks.loop(seconds=1)
     async def play_loop(self):
@@ -214,7 +68,7 @@ class VCCommands(commands.Cog):
 
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
-                voice_client.play(discord.FFmpegPCMAudio("sounds/skibidiedgerizz.mp3"),
+                voice_client.play(discord.FFmpegPCMAudio(f"sounds/{await self.bot.get_settings(voice_client.guild.id)["base_sound_id"]}.mp3"),
                                   after=lambda e: print(f'Error: {e}') if e else None)
     
 
