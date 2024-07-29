@@ -68,7 +68,10 @@ class VCCommands(commands.Cog):
 
         for voice_client in voice_clients:
             if not voice_client.is_playing() and voice_client.is_connected():
-                voice_client.play(discord.FFmpegPCMAudio(f"sounds/{await self.bot.get_settings(voice_client.guild.id)["base_sound_id"]}.mp3"),
+                guild_settings = await self.bot.get_settings(voice_client.guild.id)
+                if not guild_settings['base_sound_id']:
+                    continue
+                voice_client.play(discord.FFmpegPCMAudio(f"sounds/{guild_settings['base_sound_id']}.mp3"),
                                   after=lambda e: print(f'Error: {e}') if e else None)
     
 

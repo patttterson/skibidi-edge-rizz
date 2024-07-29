@@ -40,10 +40,10 @@ class CustomSounds(commands.Cog):
         if name == None:
             name = sound.filename[:-4]
         
-        sound_id = self.bot.snowflake_gen.get_snowflake()
+        sound_id = next(self.bot.snowflake_gen)
         async with self.bot.db.cursor() as cursor:
-            await cursor.execute("INSERT INTO sounds (id, name) VALUES (?, ?)", (sound_id, name))
-            await self.bot.db.commit()
+            await cursor.execute("INSERT INTO sounds (id, author_id, name) VALUES (?, ?, ?)", (sound_id, interaction.user.id, name))
+            await self.bot. db.commit()
 
         file = await sound.to_file(filename=f"{sound_id}.mp3")
 
@@ -72,7 +72,8 @@ class CustomSounds(commands.Cog):
         interaction.guild.voice_client.play(discord.FFmpegPCMAudio(f"sounds/{sound_id}.mp3"),
                                             after=after_playing)
         
-        await interaction.response.send_message(f"Playing {self.bot.get_sound(sound_id)["name"]}", ephemeral=True)
+        sound = await self.bot.get_sound(sound_id)
+        await interaction.response.send_message(f"Playing {sound['name']}", ephemeral=True)
         self.done_playing.start()
 
     async def delete_sound_callback(self, interaction: discord.Interaction, sound_id: str):
@@ -81,7 +82,7 @@ class CustomSounds(commands.Cog):
             return
         
         view = Confirm()
-        await interaction.response.send_message(f"Are you sure you want to delete {self.bot.get_sound(sound_id)["name"]}?", ephemeral=True, view=view)
+        await interaction.response.send_message(f"Are you sure you want to delete {self.bot.get_sound(sound_id)['name']}?", ephemeral=True, view=view)
         await view.wait()
         if not view.value:
             await interaction.followup.send("Request timed out...", ephemeral=True)
@@ -89,7 +90,7 @@ class CustomSounds(commands.Cog):
             os.remove(f"sounds/{sound_id}.mp3")
             async with self.bot.db.cursor() as cursor:
                 await cursor.execute("DELETE FROM sounds WHERE id = ?", (sound_id,))
-            await interaction.followup.send(f"Deleted {self.bot.get_sound(sound_id)["name"]}.", ephemeral=True)
+            await interaction.followup.send(f"Deleted {self.bot.get_sound(sound_id)['name']}.", ephemeral=True)
         else:
             await interaction.followup.send("Cancelled.", ephemeral=True)
         
@@ -97,7 +98,7 @@ class CustomSounds(commands.Cog):
             b.disabled = True
 
     async def preview_callback(self, interaction: discord.Interaction, sound_id: str):
-        await interaction.response.send_message(f"Previewing {self.bot.get_sound(sound_id)["name"]}",
+        await interaction.response.send_message(f"Previewing {self.bot.get_sound(sound_id)['name']}",
                                                 ephemeral=False,
                                                 file=discord.File(open(f"sounds/{sound_id}.mp3", "rb"), filename=f"{sound_id}.mp3"))
 
@@ -105,7 +106,7 @@ class CustomSounds(commands.Cog):
     @app_commands.guild_only()
     async def play_sound(self, interaction: discord.Interaction):
         if not interaction.guild.voice_client:
-            view = VC_Dropdown(interaction.guild.voice_channels, self.jvc_callback, "Pick a voice channel...")
+            view = VCView(interaction.guild.voice_channels, self.jvc_callback, "Pick a voice channel...")
             await interaction.response.send_message(f"I'm not connected to a voice channel, pick one you want me to join.", ephemeral=True, view=view)
             return
         
@@ -118,20 +119,20 @@ class CustomSounds(commands.Cog):
             await interaction.response.send_message("I'm already playing something!", ephemeral=True)
             return
         
-        user_sounds = self.bot.get_sounds(interaction.user.id)
+        user_sounds = await self.bot.get_sounds(interaction.user.id)
         if not user_sounds:
             await interaction.response.send_message("You haven't uploaded any sounds yet! Upload some with </upload:1262324370353815597>", ephemeral=True)
             return
-        file_selector = Sound_Dropdown(user_sounds, self.play_callback, "Pick a sound...")
+        file_selector = SoundView(user_sounds, self.play_callback, "Pick a sound...")
         await interaction.response.send_message("Pick a sound you've uploaded to play!", ephemeral=False, view=file_selector)
 
     @app_commands.command(name="delete", description="Delete a sound")
     async def delete(self, interaction: discord.Interaction):
-        user_sounds = self.bot.get_sounds(interaction.user.id)
+        user_sounds = await self.bot.get_sounds(interaction.user.id)
         if not user_sounds:
             await interaction.response.send_message("You haven't uploaded any sounds yet! Upload some with </upload:1262324370353815597>", ephemeral=True)
             return
-        file_selector = Sound_Dropdown(user_sounds, self.delete_sound_callback, "Pick a sound...")
+        file_selector = SoundView(user_sounds, self.delete_sound_callback, "Pick a sound...")
         await interaction.response.send_message("Pick a sound you've uploaded to delete.", ephemeral=False, view=file_selector)
     
     @app_commands.command(name="preview", description="Preview a sound")
@@ -141,21 +142,8 @@ class CustomSounds(commands.Cog):
         if not user_sounds:
             await interaction.response.send_message("You haven't uploaded any sounds yet! Upload some with </upload:1262324370353815597>", ephemeral=True)
             return
-        file_selector = Sound_Dropdown(user_sounds, self.preview_callback, "Pick a sound...")
+        file_selector = SoundView(user_sounds, self.preview_callback, "Pick a sound...")
         await interaction.response.send_message("Pick a sound you've uploaded to preview.", ephemeral=True, view=file_selector)
-
-    @play_sound.autocomplete("file")
-    @delete.autocomplete("file")
-    @preview.autocomplete("file")
-    async def file_autocomplete(self, interaction: discord.Interaction, current: str):
-        async with self.bot.db.cursor() as cursor:
-            await cursor.execute("SELECT name FROM sounds")
-            sounds = await cursor.fetchall()
-            sounds = list(map(dict, sounds))
-        return [
-            app_commands.Choice(name=s["name"], value=s["id"])
-            for s in sounds if current.lower() in s["name"].lower()
-        ]
     
     @app_commands.command(name="list", description="List all sounds")
     @can_use()
@@ -175,4 +163,4 @@ class CustomSounds(commands.Cog):
 
 
 async def setup(bot):
-    bot.add_cog(CustomSounds(bot))
+    await bot.add_cog(CustomSounds(bot))

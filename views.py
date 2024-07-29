@@ -33,13 +33,25 @@ class VC_Dropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         await self.custom_callback(interaction, self.values[0])
 
+class VCView(discord.ui.View):
+    def __init__(self, vcs: list[discord.VoiceChannel], custom_callback, placeholder):
+        super().__init__()
+    
+        self.add_item(VC_Dropdown(vcs, custom_callback, placeholder))
+
 class Sound_Dropdown(discord.ui.Select):
-    def __init__(self, sounds: list[dict], custom_callback, placeholder):
+    def __init__(self, sounds: dict, custom_callback, placeholder):
         self.custom_callback = custom_callback
 
-        options = [discord.SelectOption(label=s['name'], value=s['id']) for s in sounds]
+        options = [discord.SelectOption(label=sounds[s], value=s) for s in sounds]
 
         super().__init__(placeholder=placeholder, min_values=1, max_values=1, options=options)
     
     async def callback(self, interaction: discord.Interaction):
         await self.custom_callback(interaction, self.values[0])
+
+class SoundView(discord.ui.View):
+    def __init__(self, sounds: dict, custom_callback, placeholder):
+        super().__init__()
+
+        self.add_item(Sound_Dropdown(sounds, custom_callback, placeholder))

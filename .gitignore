@@ -4,3 +4,6 @@ activate.bat
 db_testing.py
 skibidi.db
 .VSCodeCounter
+sounds/*
+!sounds/.gitkeep
+cogs/__pycache__

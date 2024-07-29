@@ -33,7 +33,8 @@ class Bot(commands.Bot):
 
         self.db = await asqlite.connect("skibidi.db")
         self.settings_cache = {}
-        self.sound_cache = {}
+        self.sound_cache = {} # key is sound's id
+        self.user_cache = {} # same as sound cache but key is user_id
 
         async with self.db.cursor() as cursor:
             await cursor.execute("SELECT * FROM settings")
@@ -69,17 +70,23 @@ class Bot(commands.Bot):
         return self.settings_cache[guild_id]
     
     async def get_sounds(self, user_id):
-        if not self.sound_cache.get(user_id, False):
+        if not self.user_cache.get(user_id, False):
             async with self.db.cursor() as cursor:
                 await cursor.execute("SELECT * FROM sounds WHERE author_id = ?", (user_id,))
-                sounds = dict(await cursor.fetchone())
+                sounds = await cursor.fetchall()
                 if not sounds:
                     return None
-                self.sound_cache[sounds.pop('id')] = sounds
+                try:
+                    self.user_cache[user_id]
+                except KeyError:
+                    self.user_cache[user_id] = {}
+                for s in sounds:
+                    so = list(s)
+                    self.user_cache[user_id][so[0]] = so[2]
 
-        return self.sound_cache[user_id]
+        return self.user_cache[user_id]
     
-    async def get_sound(self, sound_id):
+    async def get_sound(self, sound_id: int):
         if not self.sound_cache.get(sound_id, False):
             async with self.db.cursor() as cursor:
                 await cursor.execute("SELECT * FROM sounds WHERE id = ?", (sound_id,))
@@ -134,6 +141,38 @@ async def on_command_error(ctx, error):
         embed.title = f"An Error Occurred in {ctx.guild.name}."
         await dev.send(embed=embed)
         await dev.send(f"The command `{ctx.command.name}` failed to run properly.")
+
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    if hasattr(interaction.command, 'on_error'):
+        return
+    elif isinstance(error, app_commands.CommandNotFound):
+        await interaction.response.send_message("Invalid Command Used.", ephemeral=True)
+    elif isinstance(error, app_commands.MissingPermissions):
+        await interaction.followup.send(f"You are missing permissions to run this command.\n"
+                       f"If you think this is a mistake, please contact {bot.application_info().owner}.", ephemeral=True)
+    elif isinstance(error, app_commands.ExtensionNotLoaded):
+        await interaction.response.send_message("The extension(s) you are trying to unload are currently not loaded.", ephemeral=True)
+    elif isinstance(error, app_commands.ExtensionAlreadyLoaded):
+        await interaction.response.send_message("The extension(s) you are trying to load are currently already loaded.", ephemeral=True)
+    elif isinstance(error, app_commands.ExtensionNotFound):
+        await interaction.response.send_message("The extension you are trying to load does not exist.", ephemeral=True)
+    elif isinstance(error, app_commands.NoPrivateMessage):
+        await interaction.response.send_message("The command you are trying to call can only be called in a server, not a DM.", ephemeral=True)
+    elif isinstance(error, app_commands.CheckFailure):
+        await interaction.response.send_message("nope lmao", ephemeral=True)
+    else:
+        embed = discord.Embed(title='An Error Occurred, and has been sent to the developers.',
+                              description='', colour=discord.Colour.red())
+        embed.add_field(name="Error", value=error)
+        bug_message = await interaction.response.send_message(embed=embed)
+
+        guild = bot.get_guild(1246945254972723202)
+        dev = guild.get_member(843230753734918154)
+        await dev.send(bug_message.jump_url)
+        embed.title = f"An Error Occurred in {interaction.guild.name}."
+        await dev.send(embed=embed)
+        await dev.send(f"The command `{interaction.command.name}` failed to run properly.")
 
 @bot.command()
 @commands.guild_only()
