@@ -6,4 +6,4 @@ skibidi.db
 .VSCodeCounter
 sounds/*
 !sounds/.gitkeep
-cogs/__pycache__
+**/__pycache__

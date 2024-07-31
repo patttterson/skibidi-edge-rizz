@@ -12,6 +12,10 @@ import logging
 import os
 from dotenv import load_dotenv
 
+import datetime
+
+import subprocess
+
 load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
@@ -36,12 +40,13 @@ class Bot(commands.Bot):
         self.sound_cache = {} # key is sound's id
         self.user_cache = {} # same as sound cache but key is user_id
 
+        self.idling = {} # guild_id: true or false
+
         async with self.db.cursor() as cursor:
             await cursor.execute("SELECT * FROM settings")
             settings = await cursor.fetchall()
             settings = list(map(dict, settings))
             for s in settings:
-                s["rejoin"] = True
                 self.settings_cache[s.pop('guild_id')] = s
         
         async with self.db.cursor() as cursor:
@@ -85,7 +90,7 @@ class Bot(commands.Bot):
                     self.user_cache[user_id][so[0]] = so[2]
 
         return self.user_cache[user_id]
-    
+
     async def get_sound(self, sound_id: int):
         if not self.sound_cache.get(sound_id, False):
             async with self.db.cursor() as cursor:
@@ -95,10 +100,25 @@ class Bot(commands.Bot):
                     return None
                 self.sound_cache[sound.pop('id')] = sound
 
-        return self.sound_cache[sound_id]
+        print(self.sound_cache)
+        return self.sound_cache[int(sound_id)]
     
     async def on_ready(self):
         logging.info("Connected to Discord.")
+
+        if os.path.exists("./restart_message_id.txt"):
+            with open("./restart_message_id.txt", "r") as file:
+                message_id, channel_id, restart_time = list(map(int, file.read().strip().split(" ")))
+        
+            restart_time = datetime.datetime.timestamp(datetime.datetime.now()) - restart_time
+        
+            restart_channel = await self.fetch_channel(channel_id)
+            restart_message = await restart_channel.fetch_message(message_id)
+
+            embed = discord.Embed(title="Finished restarting.", description=f"Restarting took {restart_time} seconds.", color=discord.Colour.green())
+            await restart_message.edit(embed=embed)
+
+            os.remove("./restart_message_id.txt")
 
 bot = Bot(command_prefix=get_prefix,
                    intents=discord.Intents.all(),
@@ -130,13 +150,12 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CheckFailure):
         await ctx.send("nope lmao")
     else:
-        embed = discord.Embed(title='An Error Occurred, and has been sent to the developers.',
+        embed = discord.Embed(title='An Error Occurred.',
                               description='', colour=discord.Colour.red())
         embed.add_field(name="Error", value=error)
         bug_message = await ctx.send(embed=embed)
 
-        guild = bot.get_guild(1246945254972723202)
-        dev = guild.get_member(843230753734918154)
+        dev = bot.get_user(843230753734918154)
         await dev.send(bug_message.jump_url)
         embed.title = f"An Error Occurred in {ctx.guild.name}."
         await dev.send(embed=embed)
@@ -144,6 +163,8 @@ async def on_command_error(ctx, error):
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+    print(error)
+    print("skibidi.")
     if hasattr(interaction.command, 'on_error'):
         return
     elif isinstance(error, app_commands.CommandNotFound):
@@ -162,17 +183,28 @@ async def on_app_command_error(interaction: discord.Interaction, error: discord.
     elif isinstance(error, app_commands.CheckFailure):
         await interaction.response.send_message("nope lmao", ephemeral=True)
     else:
-        embed = discord.Embed(title='An Error Occurred, and has been sent to the developers.',
+        embed = discord.Embed(title='An Error Occurred.',
                               description='', colour=discord.Colour.red())
         embed.add_field(name="Error", value=error)
         bug_message = await interaction.response.send_message(embed=embed)
 
-        guild = bot.get_guild(1246945254972723202)
-        dev = guild.get_member(843230753734918154)
+        dev = bot.get_user(843230753734918154)
         await dev.send(bug_message.jump_url)
         embed.title = f"An Error Occurred in {interaction.guild.name}."
         await dev.send(embed=embed)
         await dev.send(f"The command `{interaction.command.name}` failed to run properly.")
+
+@bot.command(hidden=True)
+@commands.is_owner()
+async def restart(ctx: commands.Context):
+    embed = discord.Embed(title="Restarting...", description="(i really hope this wasnt a typo) [i was too lazy to code a confirmation prompt]", color=discord.Colour.red())
+    
+    shutdown_message = await ctx.send(embed=embed)
+
+    with open("./restart_message_id.txt", "w") as file:
+        file.write(f"{shutdown_message.id} {ctx.channel.id} {int(datetime.datetime.timestamp(datetime.datetime.now()))}")
+
+    subprocess.Popen(['./restart_bot.sh'])
 
 @bot.command()
 @commands.guild_only()

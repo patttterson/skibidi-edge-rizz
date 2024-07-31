@@ -23,18 +23,11 @@ class VCCommands(commands.Cog):
             return ctx.author.id == 843230753734918154
         return commands.check(predicate)
 
-    def can_use():
-        def predicate(interaction: discord.Interaction):
-            return interaction.user.id in (843230753734918154,
-                                           601068265745416225,
-                                           871505546593853461)
-        return app_commands.check(predicate)
-
     toggle_group = app_commands.Group(name="toggle", description="Toggle commands") 
     
     @app_commands.command()
-    @can_use()
     @app_commands.guild_only()
+    @is_owner()
     async def join(self, interaction: discord.Interaction, *, channel: discord.VoiceChannel):
         if interaction.guild.voice_client and interaction.guild.voice_client.is_connected():
             self.bot.disable_auto_join = True
@@ -44,8 +37,8 @@ class VCCommands(commands.Cog):
         await interaction.response.send_message(f"Joined {channel.mention}", ephemeral=True)
     
     @app_commands.command()
-    @can_use()
     @app_commands.guild_only()
+    @is_owner()
     async def leave(self, interaction: discord.Interaction):
         self.bot.disable_auto_join = False
 
@@ -71,8 +64,10 @@ class VCCommands(commands.Cog):
                 guild_settings = await self.bot.get_settings(voice_client.guild.id)
                 if not guild_settings['base_sound_id']:
                     continue
-                voice_client.play(discord.FFmpegPCMAudio(f"sounds/{guild_settings['base_sound_id']}.mp3"),
+                if self.bot.idling.get(voice_client.guild.id, True):
+                    voice_client.play(discord.FFmpegPCMAudio(f"sounds/{guild_settings['base_sound_id']}.mp3"),
                                   after=lambda e: print(f'Error: {e}') if e else None)
+                    
     
 
 async def setup(bot: commands.Bot):
